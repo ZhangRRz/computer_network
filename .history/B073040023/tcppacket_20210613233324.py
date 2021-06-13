@@ -5,11 +5,10 @@ import struct
 class TCPPacket:
     def __init__(self,  sport=65535, dport=80, dst='127.0.0.1', src='192.168.1.101',
                  seq=0, ack_seq=0,
-                 data=b'Nothing',
+                 data='Nothing',
                  flags_ack=0, flags_psh=0,
                  flags_rst=0, flags_syn=0, flags_fin=0,
-                 what_is_packet=0,
-                 chksum=0
+                 what_is_packet=0
                  ):
         self.raw = None
 
@@ -24,7 +23,7 @@ class TCPPacket:
         # ---- [ TCP Window Size ]
         self.tcp_wdw = socket.htons(5840)
         # ---- [ TCP CheckSum ]
-        self.tcp_chksum = chksum
+        self.tcp_chksum = 0
 
         self.src_ip = src
         self.dst_ip = dst
@@ -51,8 +50,7 @@ class TCPPacket:
                                #    self.tcp_urg_ptr,  # TCP Urgent Pointer
                                self.what_is_packet  # to show packet is for what function
                                )
-        print(type(self.raw),type(self.data))
-        self.raw = self.raw + self.data
+        self.raw = self.raw + self.data.encode('utf-8')
         # self.calculate_chksum()  # Call Calculate CheckSum
         return
 

@@ -112,7 +112,8 @@ class UDPServerMultiClient():
         temp_sock.sendto(tcp.raw, addr)
         print("send a packet to ", addr,
               "with server seq :", seq)
-        seq += 1
+        
+        
 
         # receive ACK
         data, addr = temp_sock.recvfrom(512*1024)

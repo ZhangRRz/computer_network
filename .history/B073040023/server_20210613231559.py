@@ -3,7 +3,7 @@ import threading
 import time
 from datetime import datetime
 import dns.resolver
-import tcppacket,random
+import tcppacket
 
 class UDPServerMultiClient():
     ''' A simple UDP Server for handling multiple clients '''
@@ -78,80 +78,12 @@ class UDPServerMultiClient():
         target = "../"+str(videonumber)+".mp4"
         f = open(target, "rb")
         seq_num = 10
-        ack_seq = 0
-        seq = 0
-        pendingSendData = b''
         while True:
-            pendingSendData = f.read(1024)
-            if(pendingSendData == b''):
-                pendingSendData = ''
-                fin_falg = 1
+            data = f.read(1024)
+            print(data)
+            temp_sock.sendto(data,addr)
+            if(data == b''):
                 break
-            tcp = tcppacket.TCPPacket(data=pendingSendData,
-                                        seq=seq, ack_seq=ack_seq)
-            tcp.assemble_tcp_feilds()
-            temp_sock.sendto(tcp.raw, addr)
-            print("send a packet to ", addr,
-                    "with server seq :", seq)
-            seq += 1
-
-            data, addr = temp_sock.recvfrom(512*1024)
-            s = struct.calcsize('!HHLLBBHHH')
-            unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-            if(unpackdata[5] / 2**4):
-                print("recive ACK from :", addr,\
-                  "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-            
-        
-        chksum = maybe_make_packet_error()
-        tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
-                                  seq=seq, ack_seq=ack_seq,
-                                  flags_fin=fin_falg,
-                                  chksum=chksum)
-        tcp.assemble_tcp_feilds()
-        temp_sock.sendto(tcp.raw, addr)
-        print("send a packet to ", addr,
-              "with server seq :", seq)
-        seq += 1
-
-        # receive ACK
-        data, addr = temp_sock.recvfrom(512*1024)
-        s = struct.calcsize('!HHLLBBHHH')
-        unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-        # unpackdata[5] is tcp flags
-        if(unpackdata[5] / 2**4):
-            print("recive ACK from :", addr,
-                  "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-
-        # -------------------------------------------------------
-        #  resend if packet wrong
-        # -------------------------------------------------------
-        # unpackdata[3] is tcp ack_seq
-        if(unpackdata[3] == seq):
-            # ack in correct order
-            pass
-        elif(unpackdata[3] == seq-1):
-
-            seq = unpackdata[3]
-            tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
-                                      seq=seq, ack_seq=ack_seq,
-                                      flags_fin=fin_falg)
-            tcp.assemble_tcp_feilds()
-            temp_sock.sendto(tcp.raw, addr)
-            print("REsend a packet to ", addr,
-                  "with server seq :", seq)
-            seq += 1
-        else:
-            print("order error catch")
-
-        data, addr = temp_sock.recvfrom(512*1024)
-        s = struct.calcsize('!HHLLBBHHH')
-        unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-        # unpackdata[5] is tcp flags
-        if(unpackdata[5] / 2**4):
-            print("recive ACK from :", addr,
-                  "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-        
         pass
 
     def configure_server(self):
@@ -214,12 +146,6 @@ class UDPServerMultiClient():
         ''' Shutdown the UDP server '''
         self.printwt('Shutting down server...')
         self.sock.close()
-
-def maybe_make_packet_error():
-    if(random.randint(1, 1000000) < 750000):
-        # make packet error
-        return 1
-    return 0
 
 def main():
     ''' Create a UDP Server and handle multiple clients simultaneously '''

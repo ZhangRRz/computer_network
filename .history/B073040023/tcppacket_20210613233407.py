@@ -51,7 +51,7 @@ class TCPPacket:
                                #    self.tcp_urg_ptr,  # TCP Urgent Pointer
                                self.what_is_packet  # to show packet is for what function
                                )
-        print(type(self.raw),type(self.data))
+                               
         self.raw = self.raw + self.data
         # self.calculate_chksum()  # Call Calculate CheckSum
         return

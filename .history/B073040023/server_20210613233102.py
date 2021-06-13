@@ -3,7 +3,7 @@ import threading
 import time
 from datetime import datetime
 import dns.resolver
-import tcppacket,random
+import tcppacket
 
 class UDPServerMultiClient():
     ''' A simple UDP Server for handling multiple clients '''
@@ -80,14 +80,13 @@ class UDPServerMultiClient():
         seq_num = 10
         ack_seq = 0
         seq = 0
-        pendingSendData = b''
         while True:
-            pendingSendData = f.read(1024)
-            if(pendingSendData == b''):
-                pendingSendData = ''
+            data = f.read(1024)
+            if(data == b''):
+                data = ''
                 fin_falg = 1
                 break
-            tcp = tcppacket.TCPPacket(data=pendingSendData,
+            tcp = tcppacket.TCPPacket(data=data,
                                         seq=seq, ack_seq=ack_seq)
             tcp.assemble_tcp_feilds()
             temp_sock.sendto(tcp.raw, addr)
@@ -98,13 +97,9 @@ class UDPServerMultiClient():
             data, addr = temp_sock.recvfrom(512*1024)
             s = struct.calcsize('!HHLLBBHHH')
             unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-            if(unpackdata[5] / 2**4):
-                print("recive ACK from :", addr,\
-                  "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-            
         
         chksum = maybe_make_packet_error()
-        tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
+        tcp = tcppacket.TCPPacket(data=data.encode('utf-8'),
                                   seq=seq, ack_seq=ack_seq,
                                   flags_fin=fin_falg,
                                   chksum=chksum)
@@ -131,9 +126,8 @@ class UDPServerMultiClient():
             # ack in correct order
             pass
         elif(unpackdata[3] == seq-1):
-
             seq = unpackdata[3]
-            tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
+            tcp = tcppacket.TCPPacket(data=reply.encode('utf-8'),
                                       seq=seq, ack_seq=ack_seq,
                                       flags_fin=fin_falg)
             tcp.assemble_tcp_feilds()

@@ -44,7 +44,7 @@ def init_new_calc_req(i):
 
 def init_new_videoreq_req(i):
     sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    msg = "video 1".encode('utf-8')
+    msg = "video 1"
     # print("UDP target IP:", udp_host)
     # print("UDP target Port:", udp_port)
     tcp = tcppacket.TCPPacket(data=msg)

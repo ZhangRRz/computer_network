@@ -44,7 +44,7 @@ def init_new_calc_req(i):
 
 def init_new_videoreq_req(i):
     sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    msg = "video 1".encode('utf-8')
+    msg = "video 1"
     # print("UDP target IP:", udp_host)
     # print("UDP target Port:", udp_port)
     tcp = tcppacket.TCPPacket(data=msg)
@@ -77,12 +77,15 @@ def init_new_videoreq_req(i):
             flags_ack=1,
             flags_fin=fin_flag)
         tcp.assemble_tcp_feilds()
-        print("ACK send to (IP,port):", address,
+        print("ACK send to (IP,port):", senderAddr,
               "with ack seq: ", ack_seq, " and seq: ", seq)
-        sock.sendto(tcp.raw, address)
+        sock.sendto(tcp.raw, senderAddr)
         seq += 1
         # --------------------------------------------
-        if(fin_flag):
+
+
+        recvdata += data
+        if(data == b''):
             break
     savename = str(i+1)+"received.mp4"
     f = open(savename, "wb")
@@ -130,10 +133,10 @@ threads = []
 #     threads.append(threading.Thread(target = init_new_calc_req, args = (i,)))
     # threads[-1].start()
 
-# for i in range(100):
-#     threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
-#     threads[-1].start()
-
-for i in range(1):
-    threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
+for i in range(100):
+    threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
     threads[-1].start()
+
+# for i in range(1):
+#     threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
+#     threads[-1].start()

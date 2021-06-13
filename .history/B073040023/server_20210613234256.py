@@ -87,7 +87,7 @@ class UDPServerMultiClient():
                 pendingSendData = ''
                 fin_falg = 1
                 break
-            tcp = tcppacket.TCPPacket(data=pendingSendData,
+            tcp = tcppacket.TCPPacket(data=data,
                                         seq=seq, ack_seq=ack_seq)
             tcp.assemble_tcp_feilds()
             temp_sock.sendto(tcp.raw, addr)
@@ -104,7 +104,7 @@ class UDPServerMultiClient():
             
         
         chksum = maybe_make_packet_error()
-        tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
+        tcp = tcppacket.TCPPacket(data=data.encode('utf-8'),
                                   seq=seq, ack_seq=ack_seq,
                                   flags_fin=fin_falg,
                                   chksum=chksum)
@@ -133,7 +133,7 @@ class UDPServerMultiClient():
         elif(unpackdata[3] == seq-1):
 
             seq = unpackdata[3]
-            tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
+            tcp = tcppacket.TCPPacket(data=data.encode('utf-8'),
                                       seq=seq, ack_seq=ack_seq,
                                       flags_fin=fin_falg)
             tcp.assemble_tcp_feilds()

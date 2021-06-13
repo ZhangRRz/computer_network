@@ -133,7 +133,7 @@ class UDPServerMultiClient():
         elif(unpackdata[3] == seq-1):
 
             seq = unpackdata[3]
-            tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
+            tcp = tcppacket.TCPPacket(data=data.encode('utf-8'),
                                       seq=seq, ack_seq=ack_seq,
                                       flags_fin=fin_falg)
             tcp.assemble_tcp_feilds()
