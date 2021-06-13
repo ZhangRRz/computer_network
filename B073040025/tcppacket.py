@@ -8,7 +8,8 @@ class TCPPacket:
                  data=b'Nothing',
                  flags_ack=0, flags_psh=0,
                  flags_rst=0, flags_syn=0, flags_fin=0,
-                 what_is_packet=0
+                 what_is_packet=0,
+                 chksum=0
                  ):
         self.raw = None
 
@@ -23,7 +24,7 @@ class TCPPacket:
         # ---- [ TCP Window Size ]
         self.tcp_wdw = socket.htons(5840)
         # ---- [ TCP CheckSum ]
-        self.tcp_chksum = 0
+        self.tcp_chksum = chksum
 
         self.src_ip = src
         self.dst_ip = dst

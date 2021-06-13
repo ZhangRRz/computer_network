@@ -23,6 +23,8 @@ def create_new_client(i):
         pass
     thread_lock_input_part = 1
     videoreq = 0
+    ack_seq = 0
+    seq = 0
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     PacketType = input('Input the PacketType you want to transmit: \n')
@@ -51,6 +53,7 @@ def create_new_client(i):
     tcp.assemble_tcp_feilds()
     print("request send to (IP,port):", udp_host, " , ", udp_port)
     sock.sendto(tcp.raw, (udp_host, udp_port))
+    seq += 1
 
     videodata = b''
     # receive packet
@@ -62,28 +65,47 @@ def create_new_client(i):
 
         s = struct.calcsize('!HHLLBBHHH')
         unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
+        print("receive packet from ", senderAddr,
+              "with header", unpackdata)
 
-        if(videoreq):
-            videodata += data[s:]
-        else:
-            recvmsg = data[s:].decode('utf-8')
-            print("client ", i, " accept packet from server " +
-                  str(senderAddr)+" :\n", recvmsg)
-        # print(unpackdata)
+        # unpackdata[2] = tcp_seq
+        # unpackdata[2] = checksum
+        # only accept packet come in order and checksum is right
+        if(unpackdata[2] == ack_seq and unpackdata[7] == 0):
 
-        if(unpackdata[5] % 2):
-            # fin_falg
-            fin_falg = 1
+            if(videoreq):
+                videodata += data[s:]
+            else:
+                recvmsg = data[s:].decode('utf-8')
+                print("client ", i, " accept packet from server " +
+                      str(senderAddr)+" :\n", recvmsg)
+            # print(unpackdata)
+
+            if(unpackdata[5] % 2):
+                # fin_falg
+                fin_falg = 1
+            else:
+                fin_falg = 0
+
+            # current is right so ack for next one
+            ack_seq += 1
         else:
+            print("receive packet from ", senderAddr,
+                  "with WRONG header", unpackdata)
             fin_falg = 0
-
+        # --------------------------------------------
+        # send ACK
         tcp = tcppacket.TCPPacket(
             data=str("ACK").encode('utf-8'),
+            seq=seq, ack_seq=ack_seq,
             flags_ack=1,
             flags_fin=fin_falg)
         tcp.assemble_tcp_feilds()
-        print("ACK send to (IP,port):", senderAddr)
+        print("ACK send to (IP,port):", senderAddr,
+              "with ack seq: ", ack_seq, " and seq: ", seq)
         sock.sendto(tcp.raw, senderAddr)
+        seq += 1
+        # --------------------------------------------
 
         if(fin_falg):
             if(videoreq):
@@ -97,8 +119,3 @@ threads = []
 for i in range(1):
     threads.append(threading.Thread(target=create_new_client, args=(i,)))
     threads[-1].start()
-
-# for i in range(1):
-#     threads.append(threading.Thread(
-#         target=init_new_calc_client, args=(i,)))
-#     threads[-1].start()
