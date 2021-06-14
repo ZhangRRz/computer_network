@@ -21,11 +21,11 @@ class UDPServerMultiClient():
         self.sock = None    # Socket
 
     def dns_req(self,msglist,addr,flag = False):
+        msglist = msglist.rstrip()
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         resolver = dns.resolver.Resolver()
         resolver.nameservers=['8.8.8.8']
         if(flag):
-            msglist = msglist.rstrip()
             msglist = msglist.split(" ", 2)[-1]
             msg = resolver.resolve(msglist,'A')[0].to_text().encode('utf-8')
         else:
@@ -76,12 +76,13 @@ class UDPServerMultiClient():
                 break
 
     def sendVideo(self,msg,addr,flag = False):
+        print(msg)
+        if(not flag):
+            msg = msg.decode('utf-8')
+        print(msg)
+        msg = msg.rstrip()
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        if(flag):
-            msg = msg.rstrip()
-            videonumber = msg[-1]
-        else:
-            videonumber = str(msg[-1])
+        videonumber = msg[-1]
         target = "../"+str(videonumber)+".mp4"
         f = open(target, "rb")
         # seq_num = 10

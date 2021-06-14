@@ -224,7 +224,6 @@ for i in range(3):
     threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
     threads[-1].start()
 # init_oneRQ_multiCommand()
-sleep(1)
 input("Press enter to continue")
 for i in range(100):
     threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))

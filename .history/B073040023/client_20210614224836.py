@@ -216,16 +216,12 @@ threads = []
 # Calculation--------------------------------------
 print("Demo calculation function")
 init_new_calc_req("calc (5+5)-(10*10)+(30/6)+2**4-4**0.5")
-sleep(1)
-input("Press enter to continue")
 print("-"*60)
 print("Demo DNS request function")
 for i in range(3):
     threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
     threads[-1].start()
 # init_oneRQ_multiCommand()
-sleep(1)
-input("Press enter to continue")
-for i in range(100):
-    threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
-    threads[-1].start()
+# for i in range(1):
+#     threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
+#     threads[-1].start()
