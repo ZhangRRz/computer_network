@@ -152,6 +152,7 @@ def init_oneRQ_multiCommand():
        
         if(command[i].find("calc") != -1):
             data, address = sock.recvfrom(512*1024) 
+
             s = struct.calcsize('!HHLLBBH')
             msg = data[s:].decode('utf-8')
             print(command[i],"is",msg)
@@ -159,6 +160,7 @@ def init_oneRQ_multiCommand():
         elif(command[i].find("dns") != -1):
             data, address = sock.recvfrom(512*1024) 
             s = struct.calcsize('!HHLLBBH')
+
             msg = data[s:].decode('utf-8')
             print(command[i],"is",msg)
             fin_flag = 1

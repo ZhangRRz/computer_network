@@ -143,6 +143,7 @@ def init_oneRQ_multiCommand():
         msg += str(tmp)
         command.append(tmp)
         msg += " | "
+    print(msg)
     sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     msg = msg.encode('utf-8')
     tcp = tcppacket.TCPPacket(data=msg)
@@ -152,13 +153,19 @@ def init_oneRQ_multiCommand():
        
         if(command[i].find("calc") != -1):
             data, address = sock.recvfrom(512*1024) 
+
             s = struct.calcsize('!HHLLBBH')
+            data = struct.unpack('!HHLLBBH', data[:s])
+
             msg = data[s:].decode('utf-8')
             print(command[i],"is",msg)
             fin_flag = 1
         elif(command[i].find("dns") != -1):
             data, address = sock.recvfrom(512*1024) 
+
             s = struct.calcsize('!HHLLBBH')
+            data = struct.unpack('!HHLLBBH', data[:s])
+
             msg = data[s:].decode('utf-8')
             print(command[i],"is",msg)
             fin_flag = 1
@@ -203,7 +210,7 @@ def init_oneRQ_multiCommand():
             f = open(savename, "wb")
             f.write(recvdata)
             f.close()
-        if(command[i].find("video") == -1):
+        if(command[i].find("video") != -1):
             tcp = tcppacket.TCPPacket(
                 data="ACK".encode('utf-8'),
                 flags_ack=1,

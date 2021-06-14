@@ -5,13 +5,6 @@ from datetime import datetime
 import dns.resolver
 import tcppacket,random
 
-def RepresentsInt(s):
-    try: 
-        int(s)
-        return True
-    except ValueError:
-        return False
-
 class UDPServerMultiClient():
     ''' A simple UDP Server for handling multiple clients '''
 
@@ -21,16 +14,11 @@ class UDPServerMultiClient():
         self.port = port    # Host port
         self.sock = None    # Socket
 
-    def dns_req(self,msglist,addr,flag = False):
-        msglist = msglist.rstrip()
+    def dns_req(self,msglist,addr):
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         resolver = dns.resolver.Resolver()
         resolver.nameservers=['8.8.8.8']
-        if(flag):
-            msglist = msglist.split(" ", 2)[-1]
-            msg = resolver.resolve(msglist,'A')[0].to_text().encode('utf-8')
-        else:
-            msg = resolver.resolve(msglist[1],'A')[0].to_text().encode('utf-8')
+        msg = resolver.resolve(msglist[1],'A')[0].to_text().encode('utf-8')
         # self.sock.sendto(bytes(resolver.resolve(msglist[1],'A')[0].to_text(),'ascii'),addr)
         # print('done!')
         while True:
@@ -49,16 +37,25 @@ class UDPServerMultiClient():
             if(unpackdata[5] % 2 and unpackdata[5] / 2**4):
                 break
 
-    def doCalc(self,msg,addr,flag = False):
-        msg = msg.rstrip()
+    def doCalc(self,msg,addr):
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print("calculating...",addr)
-        if(flag):
-            target = msg.split(" ", 2)[-1]
+        print(eval(target))
+        if msglist[2] == '+':
+            ans = float(msglist[1]) + float(msglist[3])
+        elif msglist[2] == '-':
+            ans = float(msglist[1]) - float(msglist[3])
+        elif msglist[2] == '*':
+            ans = float(msglist[1]) * float(msglist[3])
+        elif msglist[2] == '/':
+            ans = float(msglist[1]) / float(msglist[3])
+        elif msglist[2] == '^':
+            ans = float(msglist[1]) ** float(msglist[3])
+        elif msglist[2] == 'sqrt':
+            ans = float(msglist[1]) ** 0.5
         else:
-            target = msg[9:]
-        ans = eval(target)
-
+            print('Error form, return -1')
+            ans = -1
         msg = str(ans).encode('utf-8')
         while True:
             fin_flag = 1
@@ -77,7 +74,6 @@ class UDPServerMultiClient():
                 break
 
     def sendVideo(self,msg,addr):
-        msg = msg.rstrip()
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         videonumber = msg[-1]
         target = "../"+str(videonumber)+".mp4"
@@ -146,11 +142,11 @@ class UDPServerMultiClient():
         self.printwt(f'Binding server to {self.host}:{self.port}...')
         self.printwt(f'Server binded to {self.host}:{self.port}')
 
-    def handle_request(self, msg, client_address):
+    def handle_request(self, msglist, client_address):
         ''' Handle the client '''
-        msglist = msg.split(' ')
+        msg = msg.split(' ')
         if(msglist[0].find("calc") != -1):
-            self.doCalc(msg,client_address)
+            self.doCalc(msglist,client_address)
         elif(msglist[0].find("video") != -1):
             self.sendVideo(msglist,client_address)
         elif(msglist[0].find("dns") != -1):
@@ -176,22 +172,17 @@ class UDPServerMultiClient():
                     s = struct.calcsize('!HHLLBBH')
                     unpackdata = struct.unpack('!HHLLBBH', data[:s])
                     msg = data[s:].decode('utf-8')
-                    if(not RepresentsInt(msg[4])):
+                    if(not isinstance(msg[0], int)):
                         c_thread = threading.Thread(target = self.handle_request,
                                                 args = (msg, client_address))
                         c_thread.daemon = True
                         c_thread.start()
                     else:
-                        msg = msg[5:]
-                        commands = msg.split("|")
-                        for i in range(len(commands)-1):
-                            time.sleep(0.01)
-                            if(commands[i].find("calc") != -1):
-                                self.doCalc(commands[i],client_address,True)
-                            elif(commands[i].find("dns") != -1):
-                                self.dns_req(commands[i],client_address,True)
-                            else:
-                                self.sendVideo(commands[i],client_address)
+                        index = msg.find("***")
+                        msglist1 = msg[:index].split(' ')
+                        msglist2 = msg[index+3:index].split(' ')
+                        print(msglist1,msglist2)
+                        exit()
 
 
                 except OSError as err:

@@ -21,16 +21,11 @@ class UDPServerMultiClient():
         self.port = port    # Host port
         self.sock = None    # Socket
 
-    def dns_req(self,msglist,addr,flag = False):
-        msglist = msglist.rstrip()
+    def dns_req(self,msglist,addr):
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         resolver = dns.resolver.Resolver()
         resolver.nameservers=['8.8.8.8']
-        if(flag):
-            msglist = msglist.split(" ", 2)[-1]
-            msg = resolver.resolve(msglist,'A')[0].to_text().encode('utf-8')
-        else:
-            msg = resolver.resolve(msglist[1],'A')[0].to_text().encode('utf-8')
+        msg = resolver.resolve(msglist[1],'A')[0].to_text().encode('utf-8')
         # self.sock.sendto(bytes(resolver.resolve(msglist[1],'A')[0].to_text(),'ascii'),addr)
         # print('done!')
         while True:
@@ -77,7 +72,6 @@ class UDPServerMultiClient():
                 break
 
     def sendVideo(self,msg,addr):
-        msg = msg.rstrip()
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         videonumber = msg[-1]
         target = "../"+str(videonumber)+".mp4"
@@ -185,13 +179,9 @@ class UDPServerMultiClient():
                         msg = msg[5:]
                         commands = msg.split("|")
                         for i in range(len(commands)-1):
-                            time.sleep(0.01)
+                            sleep(0.01)
                             if(commands[i].find("calc") != -1):
                                 self.doCalc(commands[i],client_address,True)
-                            elif(commands[i].find("dns") != -1):
-                                self.dns_req(commands[i],client_address,True)
-                            else:
-                                self.sendVideo(commands[i],client_address)
 
 
                 except OSError as err:

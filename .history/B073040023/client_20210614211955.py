@@ -143,74 +143,38 @@ def init_oneRQ_multiCommand():
         msg += str(tmp)
         command.append(tmp)
         msg += " | "
+    print(msg)
     sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     msg = msg.encode('utf-8')
     tcp = tcppacket.TCPPacket(data=msg)
     tcp.assemble_tcp_feilds()
     sock.sendto(tcp.raw, (udp_host, udp_port)) 
     for i in range(x):
-       
-        if(command[i].find("calc") != -1):
-            data, address = sock.recvfrom(512*1024) 
-            s = struct.calcsize('!HHLLBBH')
-            msg = data[s:].decode('utf-8')
-            print(command[i],"is",msg)
-            fin_flag = 1
-        elif(command[i].find("dns") != -1):
-            data, address = sock.recvfrom(512*1024) 
-            s = struct.calcsize('!HHLLBBH')
-            msg = data[s:].decode('utf-8')
-            print(command[i],"is",msg)
-            fin_flag = 1
-        else:
-            recvdata = b''
-            ack_seq = 0
-            seq = 0
-            counter = 0
-            while True:
-                data, address = sock.recvfrom(512*1024) 
+        data, address = sock.recvfrom(512*1024) 
+        
+        print(i)
+        s = struct.calcsize('!HHLLBBH')
+        unpackdata = struct.unpack('!HHLLBBH', data[:s])
 
-                s = struct.calcsize('!HHLLBBHHH')
-                raw = struct.unpack('!HHLLBBHHH', data[:s])
-                print("receive packet from ", address)
-                fin_flag = raw[5] % 2
-                recvdata += data[s:]
-                if(raw[2] == ack_seq and raw[7] == 0):
-                    if(fin_flag):
-                        break
-                elif(raw[2] == ack_seq):
-                    print("Receive ERROR packet from ", address)
-                ack_seq += 1
-                counter += 1
-                # --------------------------------------------
-                # send ACK
-                if(counter == 3 or fin_flag):
-                    tcp = tcppacket.TCPPacket(
-                        data=str("ACK").encode('utf-8'),
-                        seq=seq, ack_seq=ack_seq,
-                        flags_ack=1,
-                        flags_fin=fin_flag)
-                    tcp.assemble_tcp_feilds()
-                    print("ACK send to (IP,port):", address,"with ack seq:", ack_seq)
-                    sock.sendto(tcp.raw, address)
-                    if(not fin_flag):
-                        counter = 0
-                seq += 1
-                # --------------------------------------------
-                if(fin_flag):
-                    break
-            savename = str(i+1)+"received.mp4"
-            f = open(savename, "wb")
-            f.write(recvdata)
-            f.close()
-        if(command[i].find("video") == -1):
-            tcp = tcppacket.TCPPacket(
-                data="ACK".encode('utf-8'),
-                flags_ack=1,
-                flags_fin=fin_flag)
-            tcp.assemble_tcp_feilds()
-            print("ACK send to (IP,port):", address)
-            sock.sendto(tcp.raw, address)
+        msg = data[s:].decode('utf-8')
+        if(command[i].find("calc") != -1):
+            print(command[i],"is",msg)
+            fin_flag = 1
+
+        # print(oldmsg,"is", msg)
+        # if(unpackdata[5] % 2):
+        #     # fin_falg
+        #     fin_falg = 1
+        # else:
+        #     fin_falg = 0
+
+        tcp = tcppacket.TCPPacket(
+            data="ACK".encode('utf-8'),
+            flags_ack=1,
+            flags_fin=fin_flag)
+        tcp.assemble_tcp_feilds()
+        print("ACK send to (IP,port):", address)
+        sock.sendto(tcp.raw, address)
 
 threads = []
 # Calculation--------------------------------------

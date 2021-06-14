@@ -77,7 +77,6 @@ class UDPServerMultiClient():
                 break
 
     def sendVideo(self,msg,addr):
-        msg = msg.rstrip()
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         videonumber = msg[-1]
         target = "../"+str(videonumber)+".mp4"
@@ -190,8 +189,6 @@ class UDPServerMultiClient():
                                 self.doCalc(commands[i],client_address,True)
                             elif(commands[i].find("dns") != -1):
                                 self.dns_req(commands[i],client_address,True)
-                            else:
-                                self.sendVideo(commands[i],client_address)
 
 
                 except OSError as err:

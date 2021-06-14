@@ -190,8 +190,7 @@ class UDPServerMultiClient():
                                 self.doCalc(commands[i],client_address,True)
                             elif(commands[i].find("dns") != -1):
                                 self.dns_req(commands[i],client_address,True)
-                            else:
-                                self.sendVideo(commands[i],client_address)
+                            else
 
 
                 except OSError as err:
