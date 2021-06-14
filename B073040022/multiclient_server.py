@@ -1,99 +1,125 @@
 import socket	# base module
 from random import randint
-import dns.resolver	# for ip query pip3 install dnspython
-import threading
-from datetime import datetime
-import struct
-from segment import Segment
-import time
-# socket.socket() will create a TCP socket (default)
-# socket.socket(socket.AF_INET, socket.SOCK_STREAM) to explicitly define a TCP socket
-sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)  # explicitly define a UDP socket
-udp_host = socket.gethostbyname(socket.gethostname()) # host IP
-udp_port = 12345    # specified port to connect
-sock.bind((udp_host,udp_port))
+import dns.resolver	# for ip query, first run pip3 install dnspython
+import threading    # for each client
+import struct   # for data unpacking
+from segment import Segment # my TCP packet structure
 # 1-1 set arguments
 max_rtt = 15/1000	# sec
 # in bytes
 max_seg_size = 1024
 threshold = 64*1024	# ssthresh
 buffer_size = 512*1024
-socket_lock = threading.Lock()
-tcp_header_len = struct.calcsize('!HHLLBBHH')
+tcp_header_len = struct.calcsize('!HHLLBBHHH')
 
-def printwt(msg):
-    ''' Print message with current time and date'''
-    current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f'[{current_date_time}] {msg}')
+def rand_chksum():
+    '''set 25%'''
+    return int(randint(1,1000000) > 750000)
 
-def sendto_client(msg,addr):
-    with socket_lock:
-        sock.sendto(msg, addr)
-
-def handle_request(cmdln, addr):
+def handle_request(cmdlns:str, client_addr:tuple, header:tuple):
     ''' Handle the client '''
-    printwt(f'[ REQUEST from {addr} ]')
-    cmd = cmdln.split('@')[0]
-    ln = cmdln.split('@')[1]
-    if cmd == 'video':
-        filename='../'+ln
-        file=open(filename,'rb')
-        seq_num=randint(1,10000)
-        while True:	# send until the whole file
-            data=file.read(max_seg_size)
-            sendto_client(data, addr)
-            time.sleep(0.001)
-            if data == b'':
-                break
-        file.close()
-        print('video done!')
-    elif cmd == 'math':
-        form_list=ln.split(' ')
-        if form_list[1] == '+':
-            ans = float(form_list[0]) + float(form_list[2])
-        elif form_list[1] == '-':
-            ans = float(form_list[0]) - float(form_list[2])
-        elif form_list[1] == '*':
-            ans = float(form_list[0]) * float(form_list[2])
-        elif form_list[1] == '/':
-            ans = float(form_list[0]) / float(form_list[2])
-        elif form_list[1] == '^':
-            ans = float(form_list[0]) ** float(form_list[2])
-        elif form_list[1] == 'sqrt':
-            ans = float(form_list[0]) ** 0.5
-        else:
-            print('Error form, return -1')
-            ans = -1
-        msg = Segment(data=str(ans)).raw
-        sendto_client(msg, addr)
-        printwt(f'[ RESPONSE to {addr} ]')
-    elif cmd == 'dns':
-        resolver=dns.resolver.Resolver()
-        resolver.nameservers=['8.8.8.8']
-        msg = Segment(data=resolver.resolve(ln,'A')[0].to_text()).raw
-        sendto_client(msg, addr)
-        printwt(f'[ RESPONSE to {addr} ]')
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    if header[6]:
+        # receive REQUEST but packet loss
+        print(f'[ REQUEST from {client_addr} with packet loss ]')
     else:
-        pass
-    
+        # receive REQUEST
+        print(f'[ REQUEST from {client_addr} ]')
+    for cmdln in cmdlns.split('|'):
+        cmd = cmdln.split('@')[0]
+        ln = cmdln.split('@')[1]
+        if cmd == 'video':
+            filename='../'+ln
+            file=open(filename,'rb')
+            delay_ack_counter=0
+            while True:	# send until the whole file
+                data=file.read(max_seg_size)
+                msg = Segment(data=data, tcp_chksum=rand_chksum()).raw
+                sock.sendto(msg, client_addr)
+                print(f'[ RESPONSE video request to {client_addr} ]')
+                delay_ack_counter+=1
+                if delay_ack_counter==3 or data == b'':
+                    # wait ack
+                    ack_msg, client_addr = sock.recvfrom(buffer_size)
+                    header = struct.unpack('!HHLLBBHHH', ack_msg[:tcp_header_len])
+                    if (header[5] / 2**4) % 2 and header[6]:
+                        # receive ACK but packet loss
+                        print(f'[ ACK from {client_addr} with packet loss ]')
+                    elif (header[5] / 2**4) % 2:
+                        # receive ACK
+                        print(f'[ ACK from {client_addr} ]')
+                    else:
+                        print(f'SHOULD NOT HAPPEN')
+                    delay_ack_counter=0
+                if data == b'':
+                    break
+            file.close()
+            print(f'[ REQUEST from {client_addr} done ]')
+        elif cmd == 'math':
+            try:
+                ans=eval(ln)
+            except:
+                print('Error format of math formula')
+                ans=-1
+            msg = Segment(data=str(ans).encode('utf-8'), tcp_chksum=rand_chksum()).raw
+            sock.sendto(msg, client_addr)
+            print(f'[ RESPONSE math request to {client_addr} ]')
+            print(f'[ REQUEST from {client_addr} done ]')
+            # wait ack
+            ack_msg, client_addr = sock.recvfrom(buffer_size)
+            header = struct.unpack('!HHLLBBHHH', ack_msg[:tcp_header_len])
+            if (header[5] / 2**4) % 2 and header[6]:
+                # receive ACK but packet loss
+                print(f'[ ACK from {client_addr} with packet loss ]')
+            elif (header[5] / 2**4) % 2:
+                # receive ACK
+                print(f'[ ACK from {client_addr} ]')
+            else:
+                print(f'SHOULD NOT HAPPEN')
+        elif cmd == 'dns':
+            resolver=dns.resolver.Resolver()
+            resolver.nameservers=['8.8.8.8']
+            msg = Segment(data=resolver.resolve(ln,'A')[0].to_text().encode('utf-8'), tcp_chksum=rand_chksum()).raw
+            sock.sendto(msg, client_addr)
+            print(f'[ RESPONSE dns request to {client_addr} ]')
+            print(f'[ REQUEST from {client_addr} done ]')
+            # wait ack
+            ack_msg, client_addr = sock.recvfrom(buffer_size)
+            header = struct.unpack('!HHLLBBHHH', ack_msg[:tcp_header_len])
+            if (header[5] / 2**4) % 2 and header[6]:
+                # receive ACK but packet loss
+                print(f'[ ACK from {client_addr} with packet loss ]')
+            elif (header[5] / 2**4) % 2:
+                # receive ACK
+                print(f'[ ACK from {client_addr} ]')
+            else:
+                print(f'SHOULD NOT HAPPEN')
+        else:
+            pass
 
 # Wait for a client
 try:
+    # socket.socket() will create a TCP socket (default)
+    # socket.socket(socket.AF_INET, socket.SOCK_STREAM) to explicitly define a TCP socket
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)  # explicitly define a UDP socket
+    udp_host = socket.gethostbyname(socket.gethostname()) # host IP
+    udp_port = 12345    # specified port to connect (main port)
+    sock.bind((udp_host,udp_port))
     while True: # keep alive
         try: # receive request from client
-            print("Waitting for clients' command...")
+            print("[ Main Thread ] Waitting for clients' command...")
             msg, client_addr = sock.recvfrom(buffer_size)
-            header = struct.unpack('!HHLLBBHH', msg[:tcp_header_len])
-            cmdln = msg[tcp_header_len:].decode('utf-8')
-            c_thread = threading.Thread(target = handle_request, args = (cmdln, client_addr))
-            c_thread.daemon = True
-            c_thread.start()
+            header = struct.unpack('!HHLLBBHHH', msg[:tcp_header_len])
+            cmdlns = msg[tcp_header_len:].decode('utf-8')
+            server_thread = threading.Thread(target = handle_request, args = (cmdlns, client_addr, header))
+            server_thread.daemon = True
+            server_thread.start()
         except OSError as err:
-            printwt(err)
+            print(err)
 except KeyboardInterrupt:
     ''' Shutdown the UDP server '''
     print()
-    printwt('Shutting down server...')
+    print('Shutting down server...')
     sock.close()
 
 
