@@ -73,44 +73,63 @@ def handle_request(data, client_address, threadnum):
 
     s = struct.calcsize('!HHLLBBHHH')
     unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-    msg = (data[s:]).decode('utf-8')
-    print(data[s:])
+    command_and_data = (data[s:]).decode('utf-8').split('\n')
+    print(command_and_data)
     print(unpackdata)
-
+    
+    command = ''
+    msg = ''
     ack_seq = 0
     seq = 0
+    for i in range(int(len(command_and_data)/2)):
+        command = command_and_data[2*i]
+        msg = command_and_data[2*i+1]
 
-    while True:
-        if(unpackdata[8] == 0):
-            print("receive a text packet from client")
-            print("content is : "+msg)
-            reply = str("got text msg")
-            fin_falg = 1
-
-        elif(unpackdata[8] == 1):
+        if(command == "calc"):
             print("receive a math packet from client")
-            reply = str("result of "+msg+" is "+str(eval(msg)))
+            reply = str("result of "+msg+" is "+str(eval(msg))).encode('utf-8')
             fin_falg = 1
 
-        elif(unpackdata[8] == 2):
+        elif(command == "video"):
             print("receive a video request packet from client.")
-
             target = "../"+str(msg)+".mp4"
             f = open(target, "rb")
 
-            while True:
+        elif(command == "dns"):
+            print("receive a dns request packet from client.")
+            resolver = dns.resolver.Resolver()
+            resolver.nameservers = ['8.8.8.8']
+            result_IP = resolver.resolve(msg, 'A')[0].to_text()
+            reply = ("IP of "+msg+" is "+str(result_IP)).encode('utf-8')
+            fin_falg = 1
+
+        send_packet_count = 0
+        while True:
+            # if video requset reply will make at here
+            if(command == "video"):
                 reply = f.read(max_seg_size)
+                fin_falg = 0
                 if(reply == b''):
-                    reply = ''
                     fin_falg = 1
-                    break
-                tcp = tcppacket.TCPPacket(data=reply,
-                                          seq=seq, ack_seq=ack_seq)
-                tcp.assemble_tcp_feilds()
-                thread_sock.sendto(tcp.raw, client_address)
-                print("send a packet to ", client_address,
-                      "with server seq :", seq)
-                seq += 1
+
+            # -------------------------------------------------------
+            # reply will encode in below and make a packet for sending
+            # -------------------------------------------------------
+            chksum = maybe_make_packet_error()
+            tcp = tcppacket.TCPPacket(data=reply,
+                                    seq=seq, ack_seq=ack_seq,
+                                    flags_fin=fin_falg,
+                                    chksum=chksum)
+            tcp.assemble_tcp_feilds()
+            thread_sock.sendto(tcp.raw, client_address)
+            print("send a packet to ", client_address,
+                "with server seq :", seq)
+            seq += 1
+            send_packet_count += 1
+
+            # receive ACK
+            if(send_packet_count == 3 or fin_falg == 1):
+                send_packet_count = 0
 
                 data, client_address = thread_sock.recvfrom(512*1024)
                 s = struct.calcsize('!HHLLBBHHH')
@@ -118,87 +137,42 @@ def handle_request(data, client_address, threadnum):
                 # unpackdata[5] is tcp flags
                 if(unpackdata[5] / 2**4):
                     print("recive ACK from :", client_address,
-                          "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-                if(unpackdata[3] == seq):
-                    # ack in correct order
-                    pass
-                elif(unpackdata[3] == seq-1):
-                    seq = unpackdata[3]
-                    tcp = tcppacket.TCPPacket(data=reply,
-                                              seq=seq, ack_seq=ack_seq)
-                    tcp.assemble_tcp_feilds()
-                    thread_sock.sendto(tcp.raw, client_address)
-                    seq += 1
-                else:
-                    print("order error catch")
+                        "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
 
-        elif(unpackdata[8] == 3):
-            print("receive a dns request packet from client.")
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = ['8.8.8.8']
-            result_IP = resolver.resolve(msg, 'A')[0].to_text()
-            reply = ("IP of "+msg+" is "+str(result_IP))
-            fin_falg = 1
+            # -------------------------------------------------------
+            #  resend if packet wrong
+            # -------------------------------------------------------
+            # unpackdata[3] is tcp ack_seq
+            # if(unpackdata[3] == seq):
+            #     # ack in correct order
+            #     pass
+            # elif(unpackdata[3] == seq-1):
+            #     seq = unpackdata[3]
+            #     tcp = tcppacket.TCPPacket(data=reply,
+            #                             seq=seq, ack_seq=ack_seq,
+            #                             flags_fin=fin_falg)
+            #     tcp.assemble_tcp_feilds()
+            #     thread_sock.sendto(tcp.raw, client_address)
+            #     print("REsend a packet to ", client_address,
+            #         "with server seq :", seq)
+            #     seq += 1
 
-        # -------------------------------------------------------
-        # reply will encode in below and make a packet for sending
-        # -------------------------------------------------------
-        chksum = maybe_make_packet_error()
-        tcp = tcppacket.TCPPacket(data=reply.encode('utf-8'),
-                                  seq=seq, ack_seq=ack_seq,
-                                  flags_fin=fin_falg,
-                                  chksum=chksum)
-        tcp.assemble_tcp_feilds()
-        thread_sock.sendto(tcp.raw, client_address)
-        print("send a packet to ", client_address,
-              "with server seq :", seq)
-        seq += 1
+            #     data, client_address = thread_sock.recvfrom(512*1024)
+            #     s = struct.calcsize('!HHLLBBHHH')
+            #     unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
+            #     # unpackdata[5] is tcp flags
+            #     if(unpackdata[5] / 2**4):
+            #         print("recive ACK from :", client_address,
+            #             "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
+            # -------------------------------------------------------
+            # -------------------------------------------------------
 
-        # receive ACK
-        data, client_address = thread_sock.recvfrom(512*1024)
-        s = struct.calcsize('!HHLLBBHHH')
-        unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-        # unpackdata[5] is tcp flags
-        if(unpackdata[5] / 2**4):
-            print("recive ACK from :", client_address,
-                  "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-
-        # -------------------------------------------------------
-        #  resend if packet wrong
-        # -------------------------------------------------------
-        # unpackdata[3] is tcp ack_seq
-        if(unpackdata[3] == seq):
-            # ack in correct order
-            pass
-        elif(unpackdata[3] == seq-1):
-            seq = unpackdata[3]
-            tcp = tcppacket.TCPPacket(data=reply.encode('utf-8'),
-                                      seq=seq, ack_seq=ack_seq,
-                                      flags_fin=fin_falg)
-            tcp.assemble_tcp_feilds()
-            thread_sock.sendto(tcp.raw, client_address)
-            print("REsend a packet to ", client_address,
-                  "with server seq :", seq)
-            seq += 1
-        else:
-            print("order error catch")
-
-        data, client_address = thread_sock.recvfrom(512*1024)
-        s = struct.calcsize('!HHLLBBHHH')
-        unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-        # unpackdata[5] is tcp flags
-        if(unpackdata[5] / 2**4):
-            print("recive ACK from :", client_address,
-                  "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-        # -------------------------------------------------------
-        # -------------------------------------------------------
-
-        # print(unpackdata)
-        # print(thread_num_array)
-        # if both fin and ack eq 1
-        if(unpackdata[5] % 2 and unpackdata[5] / 2**4):
-            thread_num_array[threadnum] = 0
-            break
+            # print(unpackdata)
+            # print(thread_num_array)
+            # if both fin and ack eq 1
+            if(unpackdata[5] % 2 and unpackdata[5] / 2**4):
+                thread_num_array[threadnum] = 0
+                break
 
     pass
 # -------------------------------------------------------
@@ -207,7 +181,7 @@ def handle_request(data, client_address, threadnum):
 
 
 def maybe_make_packet_error():
-    if(random.randint(1, 1000000) < 750000):
+    if(random.randint(1, 1000000) < 1):
         # make packet error
         return 1
     return 0
