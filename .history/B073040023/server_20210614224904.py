@@ -21,11 +21,12 @@ class UDPServerMultiClient():
         self.sock = None    # Socket
 
     def dns_req(self,msglist,addr,flag = False):
+        if(not flag):
+        msglist = msglist.rstrip()
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         resolver = dns.resolver.Resolver()
         resolver.nameservers=['8.8.8.8']
         if(flag):
-            msglist = msglist.rstrip()
             msglist = msglist.split(" ", 2)[-1]
             msg = resolver.resolve(msglist,'A')[0].to_text().encode('utf-8')
         else:
