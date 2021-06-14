@@ -74,7 +74,8 @@ def init_new_videoreq_req(i):
         counter += 1
         # --------------------------------------------
         # send ACK
-        if(counter == 3 or fin_flag):
+        if(counter == 3):
+            print("HHH")
             tcp = tcppacket.TCPPacket(
                 data=str("ACK").encode('utf-8'),
                 seq=seq, ack_seq=ack_seq,

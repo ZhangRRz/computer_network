@@ -62,31 +62,39 @@ def init_new_videoreq_req(i):
 
         s = struct.calcsize('!HHLLBBHHH')
         raw = struct.unpack('!HHLLBBHHH', data[:s])
-        print("receive packet from ", address)
-        fin_flag = raw[5] % 2
-        recvdata += data[s:]
+        print("receive packet from ", address,
+              "with header", raw)
         if(raw[2] == ack_seq and raw[7] == 0):
-            if(fin_flag):
-                break
-        elif(raw[2] == ack_seq):
+            recvdata += data[s:]
+            if(raw[5] % 2):
+                # fin_falg
+                fin_flag = 1
+            else:
+                fin_flag = 0
+            ack_seq += 1
+            counter += 1
+        else:
             print("Receive ERROR packet from ", address)
-        ack_seq += 1
-        counter += 1
+            fin_flag = 1
+            counter = 3
+            
         # --------------------------------------------
         # send ACK
-        if(counter == 3 or fin_flag):
+        if(counter == 3):
             tcp = tcppacket.TCPPacket(
                 data=str("ACK").encode('utf-8'),
                 seq=seq, ack_seq=ack_seq,
                 flags_ack=1,
                 flags_fin=fin_flag)
             tcp.assemble_tcp_feilds()
-            print("ACK send to (IP,port):", address,"with ack seq:", ack_seq)
+            print("ACK send to (IP,port):", address,
+                "with ack seq: ", ack_seq, " and seq: ", seq)
             sock.sendto(tcp.raw, address)
             if(not fin_flag):
                 counter = 0
         seq += 1
         # --------------------------------------------
+        print(fin_flag)
         if(fin_flag):
             break
     savename = str(i+1)+"received.mp4"
@@ -133,25 +141,32 @@ def init_new_dns_req(i):
 # def init_new
 
 threads = []
-#Calculation--------------------------------------
-# print("Demo calculation function")
-# init_new_calc_req("calc 2 + 6")
-# sleep(0.01)
-# init_new_calc_req("calc 2 - 6")
-# sleep(0.01)
-# init_new_calc_req("calc 2 * 6")
-# sleep(0.01)
-# init_new_calc_req("calc 2 / 6")
-# sleep(0.01)
-# init_new_calc_req("calc 2 ^ 6")
-# sleep(0.01)
-# init_new_calc_req("calc 16 sqrt")
-# sleep(0.01)
-# print("-"*60)
-# print("Demo DNS request function")
-# for i in range(3):
+#Calculation
+print("Demo calculation function")
+init_new_calc_req("calc 2 + 6")
+sleep(0.01)
+init_new_calc_req("calc 2 - 6")
+sleep(0.01)
+init_new_calc_req("calc 2 * 6")
+sleep(0.01)
+init_new_calc_req("calc 2 / 6")
+sleep(0.01)
+init_new_calc_req("calc 2 ^ 6")
+sleep(0.01)
+init_new_calc_req("calc 16 sqrt")
+sleep(0.01)
+
+for i in range(1):
+    threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
+    threads[-1].start()
+
+# threads.append(threading.Thread(target = init_new_calc_req, args = (i,)))
+# threads[-1].start()
+
+# for i in range(1):
 #     threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
 #     threads[-1].start()
-for i in range(1):
-    threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
-    threads[-1].start()
+
+# for i in range(1):
+#     threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
+#     threads[-1].start()

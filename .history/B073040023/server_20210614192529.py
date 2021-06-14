@@ -104,7 +104,7 @@ class UDPServerMultiClient():
                     print("recive ACK from :", addr,\
                     "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
                 counter = 0
-
+        print(fin_flag)
         chksum = maybe_make_packet_error()
         tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
                                   seq=seq, ack_seq=ack_seq,

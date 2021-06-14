@@ -104,7 +104,7 @@ class UDPServerMultiClient():
                     print("recive ACK from :", addr,\
                     "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
                 counter = 0
-
+        print(fin_flag)
         chksum = maybe_make_packet_error()
         tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
                                   seq=seq, ack_seq=ack_seq,
@@ -142,14 +142,16 @@ class UDPServerMultiClient():
 
     def handle_request(self, msglist, client_address):
         ''' Handle the client '''
-        temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
+        # s = struct.calcsize('!HHLLBBH')
+        # unpackdata = struct.unpack('!HHLLBBH', data[:s])
+        # msg = data[s:].decode('utf-8')
+        # msglist = msg.split(' ')
         if(msglist[0].find("calc") != -1):
-            self.doCalc(msglist,client_address,temp_sock)
+            self.doCalc(msglist,client_address)
         elif(msglist[0].find("video") != -1):
-            self.sendVideo(msglist,client_address,temp_sock)
+            self.sendVideo(msglist,client_address)
         elif(msglist[0].find("dns") != -1):
-            self.dns_req(msglist,client_address,temp_sock)
+            self.dns_req(msglist,client_address)
         pass
 
     def printwt(self, msg):
@@ -172,9 +174,10 @@ class UDPServerMultiClient():
                     unpackdata = struct.unpack('!HHLLBBH', data[:s])
                     msg = data[s:].decode('utf-8')
                     if(not isinstance(msg[0], int)):
+                        temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         msglist = msg.split(' ')
                         c_thread = threading.Thread(target = self.handle_request,
-                                                args = (msglist, client_address))
+                                                args = (msglist, client_address,temp_sock))
                         c_thread.daemon = True
                         c_thread.start()
                     else:

@@ -62,31 +62,39 @@ def init_new_videoreq_req(i):
 
         s = struct.calcsize('!HHLLBBHHH')
         raw = struct.unpack('!HHLLBBHHH', data[:s])
-        print("receive packet from ", address)
-        fin_flag = raw[5] % 2
-        recvdata += data[s:]
+        print("receive packet from ", address,
+              "with header", raw)
         if(raw[2] == ack_seq and raw[7] == 0):
-            if(fin_flag):
+            recvdata += data[s:]
+            if(raw[5] % 2):
+                # fin_falg
+                fin_flag = 1
                 break
-        elif(raw[2] == ack_seq):
+            else:
+                fin_flag = 0
+            ack_seq += 1
+            counter += 1
+        else if :
             print("Receive ERROR packet from ", address)
-        ack_seq += 1
-        counter += 1
+            counter += 1
+            
         # --------------------------------------------
         # send ACK
-        if(counter == 3 or fin_flag):
+        if(counter == 3):
             tcp = tcppacket.TCPPacket(
                 data=str("ACK").encode('utf-8'),
                 seq=seq, ack_seq=ack_seq,
                 flags_ack=1,
                 flags_fin=fin_flag)
             tcp.assemble_tcp_feilds()
-            print("ACK send to (IP,port):", address,"with ack seq:", ack_seq)
+            print("ACK send to (IP,port):", address,
+                "with ack seq: ", ack_seq, " and seq: ", seq)
             sock.sendto(tcp.raw, address)
             if(not fin_flag):
                 counter = 0
         seq += 1
         # --------------------------------------------
+        print(fin_flag)
         if(fin_flag):
             break
     savename = str(i+1)+"received.mp4"

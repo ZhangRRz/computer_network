@@ -74,19 +74,22 @@ def init_new_videoreq_req(i):
         counter += 1
         # --------------------------------------------
         # send ACK
-        if(counter == 3 or fin_flag):
+        if(counter == 3):
+            print("HHH")
             tcp = tcppacket.TCPPacket(
                 data=str("ACK").encode('utf-8'),
                 seq=seq, ack_seq=ack_seq,
                 flags_ack=1,
                 flags_fin=fin_flag)
             tcp.assemble_tcp_feilds()
-            print("ACK send to (IP,port):", address,"with ack seq:", ack_seq)
+            print("ACK send to (IP,port):", address,
+                "with ack seq: ", ack_seq)
             sock.sendto(tcp.raw, address)
             if(not fin_flag):
                 counter = 0
         seq += 1
         # --------------------------------------------
+        print(fin_flag)
         if(fin_flag):
             break
     savename = str(i+1)+"received.mp4"
