@@ -48,7 +48,8 @@ def new_client(cmdlns:str):
                         delay_ack_counter=0
                     if data == b'':
                         break
-                savename='saved_'+ln
+                prefix=addr[1]
+                savename=str(prefix)+'_'+ln
                 file=open(savename,'wb')
                 file.write(recv)
                 file.close()
@@ -84,8 +85,12 @@ def new_client(cmdlns:str):
         print('\nShutting down client...')
         sock.close()
 
-client_num=input('How many clients: ')
 cmdlns_list=[]
+
+##############################################
+############### standard input ###############
+##############################################
+client_num=input('How many clients: ')
 for i in range(int(client_num)):
     print('Input commands in the following form: cmdln{|cmdln}')
     print('video@filename')
@@ -98,6 +103,14 @@ for i in range(int(client_num)):
     print('\tA ** B')
     cmdlns = input('Input command: ')
     cmdlns_list.append(cmdlns)
+
+#############################################
+################# n clients #################
+#############################################
+# n=100
+# for i in range(n):
+#     cmdlns_list.append('video@1.mp4')
+
 
 for cmdlns in cmdlns_list:
     client=threading.Thread(target=new_client, args=(cmdlns,))
