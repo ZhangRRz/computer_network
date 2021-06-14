@@ -82,12 +82,11 @@ class UDPServerMultiClient():
         seq = 0
         pendingSendData = b''
         chksum = 0
-        counter = 0
         while True:
             pendingSendData = f.read(1024)
             if(pendingSendData == b''):
                 pendingSendData = ''
-                fin_flag = 1
+                fin_falg = 1
                 break
             tcp = tcppacket.TCPPacket(data=pendingSendData,
                                         seq=seq, ack_seq=ack_seq)
@@ -103,13 +102,13 @@ class UDPServerMultiClient():
             if(unpackdata[5] / 2**4):
                 print("recive ACK from :", addr,\
                   "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-        print(fin_flag)
-        chksum = maybe_make_packet_error()
+        
+        # chksum = maybe_make_packet_error()
         tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
                                   seq=seq, ack_seq=ack_seq,
-                                  flags_fin=fin_flag,
+                                  flags_fin=fin_falg,
                                   chksum=chksum)
-        tcp.assemble_tcp_feilds()
+        # tcp.assemble_tcp_feilds()
         temp_sock.sendto(tcp.raw, addr)
         print("send a packet to ", addr,
               "with server seq :", seq)
@@ -124,7 +123,35 @@ class UDPServerMultiClient():
             print("recive ACK from :", addr,
                   "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
 
-        print("TTTTTT")
+        # -------------------------------------------------------
+        #  resend if packet wrong
+        # -------------------------------------------------------
+        # unpackdata[3] is tcp ack_seq
+        # if(unpackdata[3] == seq):
+        #     # ack in correct order
+        #     pass
+        # elif(unpackdata[3] == seq-1):
+
+        #     seq = unpackdata[3]
+        #     tcp = tcppacket.TCPPacket(data=pendingSendData.encode('utf-8'),
+        #                               seq=seq, ack_seq=ack_seq,
+        #                               flags_fin=fin_falg)
+        #     tcp.assemble_tcp_feilds()
+        #     temp_sock.sendto(tcp.raw, addr)
+        #     print("REsend a packet to ", addr,
+        #           "with server seq :", seq)
+        #     seq += 1
+        # else:
+        #     print("order error catch")
+
+        data, addr = temp_sock.recvfrom(512*1024)
+        s = struct.calcsize('!HHLLBBHHH')
+        unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
+        # unpackdata[5] is tcp flags
+        if(unpackdata[5] / 2**4):
+            print("recive ACK from :", addr,
+                  "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
+        
         pass
 
     def configure_server(self):
@@ -141,12 +168,12 @@ class UDPServerMultiClient():
         self.printwt(f'Binding server to {self.host}:{self.port}...')
         self.printwt(f'Server binded to {self.host}:{self.port}')
 
-    def handle_request(self, msglist, client_address):
+    def handle_request(self, data, client_address):
         ''' Handle the client '''
-        # s = struct.calcsize('!HHLLBBH')
-        # unpackdata = struct.unpack('!HHLLBBH', data[:s])
-        # msg = data[s:].decode('utf-8')
-        # msglist = msg.split(' ')
+        s = struct.calcsize('!HHLLBBH')
+        unpackdata = struct.unpack('!HHLLBBH', data[:s])
+        msg = data[s:].decode('utf-8')
+        msglist = msg.split(' ')
         if(msglist[0].find("calc") != -1):
             self.doCalc(msglist,client_address)
         elif(msglist[0].find("video") != -1):
@@ -170,23 +197,10 @@ class UDPServerMultiClient():
                     print("Waiting for client...")
                     data, client_address = self.sock.recvfrom(1024)
                     print("Received request from client:",client_address)
-
-                    s = struct.calcsize('!HHLLBBH')
-                    unpackdata = struct.unpack('!HHLLBBH', data[:s])
-                    msg = data[s:].decode('utf-8')
-                    if(not isinstance(msg[0], int)):
-                        msglist = msg.split(' ')
-                        c_thread = threading.Thread(target = self.handle_request,
-                                                args = (msglist, client_address))
-                        c_thread.daemon = True
-                        c_thread.start()
-                    else:
-                        index = msg.find("***")
-                        msglist1 = msg[:index].split(' ')
-                        msglist2 = msg[index+3:index].split(' ')
-                        print(msglist1,msglist2)
-                        exit()
-
+                    c_thread = threading.Thread(target = self.handle_request,
+                                            args = (data, client_address))
+                    c_thread.daemon = True
+                    c_thread.start()
 
                 except OSError as err:
                     self.printwt(err)
@@ -202,7 +216,7 @@ class UDPServerMultiClient():
         self.sock.close()
 
 def maybe_make_packet_error():
-    if(random.randint(1, 1000000) < 1000000):
+    if(random.randint(1, 1000000) < 750000):
         # make packet error
         return 1
     return 0

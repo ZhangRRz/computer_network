@@ -82,7 +82,6 @@ class UDPServerMultiClient():
         seq = 0
         pendingSendData = b''
         chksum = 0
-        counter = 0
         while True:
             pendingSendData = f.read(1024)
             if(pendingSendData == b''):
@@ -169,24 +168,18 @@ class UDPServerMultiClient():
                 try: # receive request from client
                     print("Waiting for client...")
                     data, client_address = self.sock.recvfrom(1024)
-                    print("Received request from client:",client_address)
 
                     s = struct.calcsize('!HHLLBBH')
                     unpackdata = struct.unpack('!HHLLBBH', data[:s])
                     msg = data[s:].decode('utf-8')
-                    if(not isinstance(msg[0], int)):
-                        msglist = msg.split(' ')
-                        c_thread = threading.Thread(target = self.handle_request,
-                                                args = (msglist, client_address))
-                        c_thread.daemon = True
-                        c_thread.start()
-                    else:
-                        index = msg.find("***")
-                        msglist1 = msg[:index].split(' ')
-                        msglist2 = msg[index+3:index].split(' ')
-                        print(msglist1,msglist2)
-                        exit()
+                    if(msg[0].is number)
+                    # msglist = msg.split(' ')
 
+                    print("Received request from client:",client_address)
+                    c_thread = threading.Thread(target = self.handle_request,
+                                            args = (data, client_address))
+                    c_thread.daemon = True
+                    c_thread.start()
 
                 except OSError as err:
                     self.printwt(err)

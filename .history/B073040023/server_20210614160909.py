@@ -82,7 +82,6 @@ class UDPServerMultiClient():
         seq = 0
         pendingSendData = b''
         chksum = 0
-        counter = 0
         while True:
             pendingSendData = f.read(1024)
             if(pendingSendData == b''):

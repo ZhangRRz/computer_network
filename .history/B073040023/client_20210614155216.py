@@ -128,7 +128,6 @@ def init_new_dns_req(i):
             break
     # ----------------------
     
-def init_new
 
 threads = []
 # for i in range(500):

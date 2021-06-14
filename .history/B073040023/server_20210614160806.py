@@ -82,7 +82,6 @@ class UDPServerMultiClient():
         seq = 0
         pendingSendData = b''
         chksum = 0
-        counter = 0
         while True:
             pendingSendData = f.read(1024)
             if(pendingSendData == b''):
@@ -182,11 +181,7 @@ class UDPServerMultiClient():
                         c_thread.start()
                     else:
                         index = msg.find("***")
-                        msglist1 = msg[:index].split(' ')
-                        msglist2 = msg[index+3:index].split(' ')
-                        print(msglist1,msglist2)
-                        exit()
-
+                        
 
                 except OSError as err:
                     self.printwt(err)

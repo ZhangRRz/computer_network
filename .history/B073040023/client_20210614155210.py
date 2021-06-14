@@ -128,14 +128,13 @@ def init_new_dns_req(i):
             break
     # ----------------------
     
-def init_new
 
 threads = []
 # for i in range(500):
 #     threads.append(threading.Thread(target = init_new_calc_req, args = (i,)))
     # threads[-1].start()
 
-for i in range(100):
+for i in range(1):
     threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
     threads[-1].start()
 

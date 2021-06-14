@@ -70,7 +70,6 @@ def init_new_videoreq_req(i):
             ack_seq += 1
         else:
             print("Receive ERROR packet from ", address)
-            fin_flag = 1
         # --------------------------------------------
         # send ACK
         tcp = tcppacket.TCPPacket(
@@ -86,6 +85,7 @@ def init_new_videoreq_req(i):
         # --------------------------------------------
         print(fin_flag)
         if(fin_flag):
+            print("TWETWET")
             break
     savename = str(i+1)+"received.mp4"
     f = open(savename, "wb")
@@ -128,17 +128,16 @@ def init_new_dns_req(i):
             break
     # ----------------------
     
-def init_new
 
 threads = []
 # for i in range(500):
 #     threads.append(threading.Thread(target = init_new_calc_req, args = (i,)))
     # threads[-1].start()
 
-for i in range(100):
-    threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
-    threads[-1].start()
-
 # for i in range(1):
-#     threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
+#     threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
 #     threads[-1].start()
+
+for i in range(1):
+    threads.append(threading.Thread(target = init_new_videoreq_req, args = (i,)))
+    threads[-1].start()

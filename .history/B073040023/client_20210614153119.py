@@ -33,7 +33,7 @@ def init_new_calc_req(i):
             fin_falg = 0
 
         tcp = tcppacket.TCPPacket(
-            data="ACK".encode('utf-8'),
+            data="ACK".encode(),
             flags_ack=1,
             flags_fin=fin_falg)
         tcp.assemble_tcp_feilds()
@@ -68,9 +68,7 @@ def init_new_videoreq_req(i):
             else:
                 fin_flag = 0
             ack_seq += 1
-        else:
-            print("Receive ERROR packet from ", address)
-            fin_flag = 1
+
         # --------------------------------------------
         # send ACK
         tcp = tcppacket.TCPPacket(
@@ -84,7 +82,6 @@ def init_new_videoreq_req(i):
         sock.sendto(tcp.raw, address)
         seq += 1
         # --------------------------------------------
-        print(fin_flag)
         if(fin_flag):
             break
     savename = str(i+1)+"received.mp4"
@@ -118,7 +115,7 @@ def init_new_dns_req(i):
             fin_falg = 0
 
         tcp = tcppacket.TCPPacket(
-            data="ACK".encode('utf-8'),
+            data="ACK",
             flags_ack=1,
             flags_fin=fin_falg)
         tcp.assemble_tcp_feilds()
@@ -128,14 +125,13 @@ def init_new_dns_req(i):
             break
     # ----------------------
     
-def init_new
 
 threads = []
 # for i in range(500):
 #     threads.append(threading.Thread(target = init_new_calc_req, args = (i,)))
     # threads[-1].start()
 
-for i in range(100):
+for i in range(1):
     threads.append(threading.Thread(target = init_new_dns_req, args = (i,)))
     threads[-1].start()
 
