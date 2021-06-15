@@ -71,32 +71,46 @@ def handle_request(data, client_address, threadnum):
     thread_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     thread_sock.bind((host, port+threadnum+1))
 
+    # ----------------------------------------------
+    # slove client request
     s = struct.calcsize('!HHLLBBHHH')
     unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
     command_and_data = (data[s:]).decode('utf-8').split('\n')
     print(command_and_data)
-    print(unpackdata)
-    
+    # ----------------------------------------------
     command = ''
     msg = ''
-    ack_seq = 0
-    seq = 0
+    ack_seq = unpackdata[2]+1
+    seq = random.randint(1,10000)
+    # ----------------------------------------------
+    # ack client request
+    req_ack = tcppacket.TCPPacket(
+                    data=str("ACK from server").encode('utf-8'),
+                    seq=seq, ack_seq=ack_seq,
+                    flags_ack=1)
+    req_ack.assemble_tcp_feilds()
+    thread_sock.sendto(req_ack.raw, client_address)
+    seq += 1
+    # ----------------------------------------------
+
+    # start handle context of request
     for i in range(int(len(command_and_data)/2)):
+        print("===============================================")
         command = command_and_data[2*i]
         msg = command_and_data[2*i+1]
 
         if(command == "calc"):
-            print("receive a math packet from client")
+            print("dealing with math claculation ")
             reply = str("result of "+msg+" is "+str(eval(msg))).encode('utf-8')
             fin_falg = 1
 
         elif(command == "video"):
-            print("receive a video request packet from client.")
+            print("dealing with video request ")
             target = "../"+str(msg)+".mp4"
             f = open(target, "rb")
 
         elif(command == "dns"):
-            print("receive a dns request packet from client.")
+            print("dealing with dns request ")
             resolver = dns.resolver.Resolver()
             resolver.nameservers = ['8.8.8.8']
             result_IP = resolver.resolve(msg, 'A')[0].to_text()
@@ -138,38 +152,15 @@ def handle_request(data, client_address, threadnum):
                 if(unpackdata[5] / 2**4):
                     print("recive ACK from :", client_address,
                         "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
+                if(unpackdata[7] == 0):
+                    # current is right so ack for next one
+                    pass
+                else:
+                    print("but the packet from ", client_address,
+                        "with WRONG checksum",
+                        " ack seq: ", unpackdata[3], " and seq: ", unpackdata[2])
+                ack_seq += 1
 
-            # -------------------------------------------------------
-            #  resend if packet wrong
-            # -------------------------------------------------------
-            # unpackdata[3] is tcp ack_seq
-            # if(unpackdata[3] == seq):
-            #     # ack in correct order
-            #     pass
-            # elif(unpackdata[3] == seq-1):
-            #     seq = unpackdata[3]
-            #     tcp = tcppacket.TCPPacket(data=reply,
-            #                             seq=seq, ack_seq=ack_seq,
-            #                             flags_fin=fin_falg)
-            #     tcp.assemble_tcp_feilds()
-            #     thread_sock.sendto(tcp.raw, client_address)
-            #     print("REsend a packet to ", client_address,
-            #         "with server seq :", seq)
-            #     seq += 1
-
-            #     data, client_address = thread_sock.recvfrom(512*1024)
-            #     s = struct.calcsize('!HHLLBBHHH')
-            #     unpackdata = struct.unpack('!HHLLBBHHH', data[:s])
-            #     # unpackdata[5] is tcp flags
-            #     if(unpackdata[5] / 2**4):
-            #         print("recive ACK from :", client_address,
-            #             "with ack seq: ", unpackdata[3], " and client seq: ", unpackdata[2])
-            # -------------------------------------------------------
-            # -------------------------------------------------------
-
-            # print(unpackdata)
-            # print(thread_num_array)
-            # if both fin and ack eq 1
             if(unpackdata[5] % 2 and unpackdata[5] / 2**4):
                 thread_num_array[threadnum] = 0
                 break
@@ -181,20 +172,20 @@ def handle_request(data, client_address, threadnum):
 
 
 def maybe_make_packet_error():
-    if(random.randint(1, 1000000) < 1):
+    if(random.randint(1, 1000000) < 800000):
         # make packet error
         return 1
     return 0
 
 
 def shutdown_server():
-    ''' Shutdown the UDP server '''
+    # Shutdown the UDP server 
     printwt('Shutting down server...')
     sock.close()
 
-
-''' Create a UDP Server and handle multiple clients simultaneously '''
-
+# -------------------------------------------------------
+# Create a UDP Server and handle multiple clients simultaneously
+# -------------------------------------------------------
 printwt('Creating socket...')
 printwt('Socket created')
 # bind server to the address
