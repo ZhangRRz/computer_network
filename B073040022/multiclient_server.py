@@ -13,15 +13,17 @@ buffer_size = 512*1024
 tcp_header_len = struct.calcsize('!HHLLBBHHH')
 
 def rand_chksum():
-    '''set 25%'''
+    '''set 25% for better debugging'''
     return int(randint(1,1000000) > 750000)
 
 def handle_request(cmdlns:str, client_addr:tuple, header:tuple):
     ''' Handle the client '''
     sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    seq=randint(1,10000)
+    ack_seq=header[2]+1
     if header[6]:
         # receive REQUEST but packet loss
-        print(f'[ REQUEST from {client_addr} with packet loss ]')
+        print(f'[ SERVER {sock.getsockname()}: REQUEST from {client_addr} with packet loss ]')
     else:
         # receive REQUEST
         print(f'[ REQUEST from {client_addr} ]')
@@ -34,64 +36,70 @@ def handle_request(cmdlns:str, client_addr:tuple, header:tuple):
             delay_ack_counter=0
             while True:	# send until the whole file
                 data=file.read(max_seg_size)
-                msg = Segment(data=data, tcp_chksum=rand_chksum()).raw
+                msg = Segment(data=data, tcp_seq=seq, tcp_ack_seq=ack_seq, tcp_chksum=rand_chksum()).raw
                 sock.sendto(msg, client_addr)
-                print(f'[ RESPONSE video request to {client_addr} ]')
+                print(f'[ SERVER {sock.getsockname()}: RESPONSE video request to {client_addr} with SEQ = {seq}, ACK = {ack_seq} ]')
+                seq+=1
                 delay_ack_counter+=1
                 if delay_ack_counter==3 or data == b'':
                     # wait ack
                     ack_msg, client_addr = sock.recvfrom(buffer_size)
                     header = struct.unpack('!HHLLBBHHH', ack_msg[:tcp_header_len])
+                    ack_seq=header[2]+1
                     if (header[5] / 2**4) % 2 and header[6]:
                         # receive ACK but packet loss
-                        print(f'[ ACK from {client_addr} with packet loss ]')
+                        print(f'[ SERVER {sock.getsockname()}: ACK from {client_addr} with packet loss ]')
                     elif (header[5] / 2**4) % 2:
                         # receive ACK
-                        print(f'[ ACK from {client_addr} ]')
+                        print(f'[ SERVER {sock.getsockname()}: ACK from {client_addr} ]')
                     else:
                         print(f'SHOULD NOT HAPPEN')
                     delay_ack_counter=0
                 if data == b'':
                     break
             file.close()
-            print(f'[ REQUEST from {client_addr} done ]')
+            print(f'[ SERVER {sock.getsockname()}: REQUEST of video from {client_addr} done ]')
         elif cmd == 'math':
             try:
                 ans=eval(ln)
             except:
                 print('Error format of math formula')
                 ans=-1
-            msg = Segment(data=str(ans).encode('utf-8'), tcp_chksum=rand_chksum()).raw
+            msg = Segment(data=str(ans).encode('utf-8'), tcp_seq=seq, tcp_ack_seq=ack_seq, tcp_chksum=rand_chksum()).raw
             sock.sendto(msg, client_addr)
-            print(f'[ RESPONSE math request to {client_addr} ]')
-            print(f'[ REQUEST from {client_addr} done ]')
+            print(f'[ SERVER {sock.getsockname()}: RESPONSE math request to {client_addr} ] with SEQ = {seq}, ACK = {ack_seq}')
+            seq+=1
+            print(f'[ SERVER {sock.getsockname()}: REQUEST of math from {client_addr} done ]')
             # wait ack
             ack_msg, client_addr = sock.recvfrom(buffer_size)
             header = struct.unpack('!HHLLBBHHH', ack_msg[:tcp_header_len])
+            ack_seq=header[2]+1
             if (header[5] / 2**4) % 2 and header[6]:
                 # receive ACK but packet loss
-                print(f'[ ACK from {client_addr} with packet loss ]')
+                print(f'[ SERVER {sock.getsockname()}: ACK from {client_addr} with packet loss ]')
             elif (header[5] / 2**4) % 2:
                 # receive ACK
-                print(f'[ ACK from {client_addr} ]')
+                print(f'[ SERVER {sock.getsockname()}: ACK from {client_addr} ]')
             else:
                 print(f'SHOULD NOT HAPPEN')
         elif cmd == 'dns':
             resolver=dns.resolver.Resolver()
             resolver.nameservers=['8.8.8.8']
-            msg = Segment(data=resolver.resolve(ln,'A')[0].to_text().encode('utf-8'), tcp_chksum=rand_chksum()).raw
+            msg = Segment(data=resolver.resolve(ln,'A')[0].to_text().encode('utf-8'), tcp_seq=seq, tcp_ack_seq= ack_seq, tcp_chksum=rand_chksum()).raw
             sock.sendto(msg, client_addr)
-            print(f'[ RESPONSE dns request to {client_addr} ]')
-            print(f'[ REQUEST from {client_addr} done ]')
+            print(f'[ SERVER {sock.getsockname()}: RESPONSE dns request to {client_addr} ] with SEQ = {seq}, ACK = {ack_seq}')
+            seq+=1
+            print(f'[ SERVER {sock.getsockname()}: REQUEST of dns from {client_addr} done ]')
             # wait ack
             ack_msg, client_addr = sock.recvfrom(buffer_size)
             header = struct.unpack('!HHLLBBHHH', ack_msg[:tcp_header_len])
+            ack_seq=header[2]+1
             if (header[5] / 2**4) % 2 and header[6]:
                 # receive ACK but packet loss
-                print(f'[ ACK from {client_addr} with packet loss ]')
+                print(f'[ SERVER {sock.getsockname()}: ACK from {client_addr} with packet loss ]')
             elif (header[5] / 2**4) % 2:
                 # receive ACK
-                print(f'[ ACK from {client_addr} ]')
+                print(f'[ SERVER {sock.getsockname()}: ACK from {client_addr} ]')
             else:
                 print(f'SHOULD NOT HAPPEN')
         else:
